@@ -1,0 +1,72 @@
+<!DOCTYPE HTML>
+<html manifest="">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <link rel="shortcut icon" href="#"/>
+    <link rel="stylesheet" type="text/css" href="resources/lib/ol3/css/ol.css">
+    <script>
+        // Apply map config Hear
+        var config = {
+            useCapabilities: false,
+            useToolbar: false,
+            proxy: '/proxy/?url=',
+            printService: "",
+            rest: "/maps/"
+        };
+        var map_config = {}
+    </script>
+    <script src="resources/lib/jquery/jquery-2.1.4.min.js"></script>
+    <script src="resources/lib/jquery/jquery.fullscreen-min.js"></script>
+    <title>mapviewer</title>
+
+    <!--
+    <script type="text/javascript">
+        var Ext = Ext || {}; // Ext namespace won't be defined yet...
+
+        // This function is called by the Microloader after it has performed basic
+        // device detection. The results are provided in the "tags" object. You can
+        // use these tags here or even add custom tags. These can be used by platform
+        // filters in your manifest or by platformConfig expressions in your app.
+        //
+        Ext.beforeLoad = function (tags) {
+            var s = location.search,  // the query string (ex "?foo=1&bar")
+                profile;
+
+            // For testing look for "?classic" or "?modern" in the URL to override
+            // device detection default.
+            //
+            if (s.match(/\bclassic\b/)) {
+                profile = 'classic';
+            }
+            else if (s.match(/\bmodern\b/)) {
+                profile = 'modern';
+            }
+            else {
+                profile = tags.desktop ? 'classic' : 'modern';
+                //profile = tags.phone ? 'modern' : 'classic';
+            }
+
+            Ext.manifest = profile; // this name must match a build profile name
+
+            // This function is called once the manifest is available but before
+            // any data is pulled from it.
+            //
+            //return function (manifest) {
+                // peek at / modify the manifest object
+            //};
+        };
+    </script>
+    -->
+    <script src="resources/lib/ol3/ol-debug.js"></script>
+    <!--<script src="resources/lib/ol3/myTileWMS.js"></script>-->
+    <script src="resources/lib/cesium/Cesium.js"></script>
+    <script src="resources/lib/ol3-cesium/ol3cesium.js"></script>
+    <!-- The line below must be kept intact for Sencha Cmd to build your application -->
+    <script id="microloader" data-app="798c3137-276a-45ce-b654-5bfbf9aeb8ad" type="text/javascript"
+            src="bootstrap.js"></script>
+
+</head>
+<body></body>
+</html>

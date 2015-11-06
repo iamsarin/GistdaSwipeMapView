@@ -1,0 +1,13 @@
+var myTileWMS_getRequestUrl_ =
+    function (tileCoord, tileSize, tileExtent,
+              pixelRatio, projection, params) {
+
+        var noEncodeUrl = ol.source.TileWMS.prototype.getRequestUrl_.call(
+            this, tileCoord, tileSize, tileExtent,
+              pixelRatio, projection, params);
+
+        var encodeUrl = encodeURIComponent(noEncodeUrl);
+        return '/proxy/?url=' + encodeUrl;
+    };
+
+ol.inherits(myTileWMS_getRequestUrl_, ol.source.TileWMS.prototype.getRequestUrl_);

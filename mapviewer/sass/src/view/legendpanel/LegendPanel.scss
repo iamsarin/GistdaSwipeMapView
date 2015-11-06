@@ -1,0 +1,12 @@
+table.tab_legend {
+  border-collapse: collapse;
+  width: 100%;
+  td, th {
+    border: 1px solid black;
+    padding:10px 1px;
+    text-align: center;
+    &:first-child {
+      width: 30%;
+    }
+  }
+}

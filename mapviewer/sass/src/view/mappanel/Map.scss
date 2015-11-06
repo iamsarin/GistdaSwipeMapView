@@ -1,0 +1,198 @@
+@mixin tooltip-before {
+  border-top: 6px solid rgba(0, 0, 0, 0.5);
+  border-right: 6px solid transparent;
+  border-left: 6px solid transparent;
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  margin-left: -7px;
+  left: 50%;
+}
+
+@mixin controlLeft {
+  left: .5em;
+}
+
+@mixin subControlLeft {
+  left: 2.5em;
+}
+
+@mixin colorPressedButton {
+  background-color: rgba(0, 60, 136, .7);
+}
+
+@mixin colorButton {
+  background-color: rgba(0, 60, 136, .5);
+}
+
+.tooltip {
+  position: relative;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
+  color: white;
+  padding: 4px 8px;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.tooltip-measure {
+  opacity: 1;
+  font-weight: bold;
+  &:before {
+    @include tooltip-before;
+  }
+}
+
+.tooltip-static {
+  background-color: #ffcc33;
+  color: black;
+  border: 1px solid white;
+  &:before {
+    @include tooltip-before;
+    border-top-color: #ffcc33;
+  }
+}
+
+.hidden {
+  display: none;
+}
+
+.custom-mouse-position {
+  left: 8px;
+  bottom: 40px;
+  position: absolute;
+  background-color: #7b98bc;
+  height: 30px;
+  text-align: center;
+  color: white;
+  padding: 5px;
+  opacity: 0.7;
+  filter: alpha(opacity=70);
+}
+
+.zoomtoworld, .switch3dMap, .measureTools, .printMap {
+  @include controlLeft;
+}
+
+.full-screen {
+  top: .5em;
+  right: .5em;
+}
+
+.zoomtoworld {
+  top: 4.5em;
+}
+
+.switch3dMap {
+  top: 6.5em;
+}
+
+.printMap {
+  top: 10.5em;
+}
+
+.lengthControl, .areaControl, .circleControl {
+  @include subControlLeft;
+}
+
+.measureTools {
+  top: 8.5em;
+}
+
+.lengthControl {
+  top: -1.6em;
+}
+
+.areaControl {
+  top: 0;
+}
+
+.circleControl {
+  top: 1.6em;
+}
+
+.ol-rotate {
+  top: 3em;
+}
+
+.ol-overviewmap {
+  bottom: 5em;
+}
+
+button.pressed {
+  &, &:hover, &:focus {
+    @include colorPressedButton;
+  }
+}
+
+button.unpressed {
+  &, &:hover, &:focus {
+    @include colorButton;
+  }
+}
+
+.ol-touch {
+  .zoomtoworld {
+    top: 5.5em;
+  }
+  .switch3dMap {
+    top: 8em;
+  }
+  .measureTools {
+    top: 10.5em;
+  }
+  .printMap {
+    top: 13em;
+  }
+  .lengthControl {
+    top: -1.6em;
+  }
+  .areaControl {
+    top: 0;
+  }
+  .circleControl {
+    top: 1.6em;
+  }
+}
+
+table.tab_featureInfo {
+  border-collapse: collapse;
+  width: 100%;
+  td, th {
+    border: 1px solid black;
+    text-align: left;
+    &:first-child {
+      width: 30%;
+    }
+  }
+}
+
+.featureInfoElement {
+  position: absolute;
+  background-color: #ffffff;
+  border: 1px solid #c5c5c5;
+  z-index: 1;
+  border-radius: 5px;
+  &:after, &:before {
+    top: 100%;
+    left: 100%;
+    border: solid;
+    content: " ";
+    height: 0;
+    width: 0;
+    position: absolute;
+    pointer-events: none;
+  }
+  &:after {
+    border-color: rgba(255, 255, 255, 0);
+    border-bottom-color: #ffffff;
+    border-width: 8px;
+    margin-left: -8px;
+  }
+  &:before {
+    border-color: rgba(170, 170, 170, 0);
+    border-bottom-color: #c5c5c5;
+    border-width: 9px;
+    margin-left: -9px;
+  }
+}
