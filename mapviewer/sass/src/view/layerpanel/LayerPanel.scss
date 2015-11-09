@@ -2,7 +2,7 @@
 find, cursor, arrow_inout, arrow_left, arrow_right, ruler_white, ruler_square_white {
   .mv-#{$ico}-icon {
     background: {
-      image: url('/resources/img/geosilk/#{$ico}.png');
+      image: url('img/geosilk/#{$ico}.png');
       repeat: no-repeat;
       position: center;
     }
