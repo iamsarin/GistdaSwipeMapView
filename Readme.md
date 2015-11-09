@@ -4,7 +4,11 @@ Using [Openlayers3](https://openlayers.org) for 2D and [Ol3-Cesium](https://open
 This project using [Ext JS GPL](https://www.sencha.com/legal/gpl/) and [GeoExt3](https://geoext.github.io/geoext3/) for ui component.
 
 ## Installation
-  Coming soon...
+1. Download gistdamapview.zip at
+  ```
+  https://github.com/GistdaDev/GistdaMapView/releases
+  ```
+2. Installation Instructions is located in Readme.txt file.  
 
 ## Installation for Dev
 1. Clone this Repo.  
