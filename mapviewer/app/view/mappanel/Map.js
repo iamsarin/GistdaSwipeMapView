@@ -225,7 +225,8 @@ Ext.define('mapviewer.view.mappanel.Map', {
                 });
                 console.log('wmsSource', wmsSource);
                 layer = new ol.layer.Tile({
-                    name: val.title ? val.title : val.name,
+                    name: val.title ? val.title : nameSplit[1],
+                    fullname: val.name,
                     ptype: ptype,
                     sourceIndex: val.source,
                     visible: val.visibility,
@@ -243,7 +244,8 @@ Ext.define('mapviewer.view.mappanel.Map', {
                 }
 
                 layer = new ol.layer.Tile({
-                    name: val.title ? val.title : val.name,
+                    name: val.title ? val.title : nameSplit[1],
+                    fullname: val.name,
                     ptype: ptype,
                     sourceIndex: val.source,
                     visible: val.visibility,

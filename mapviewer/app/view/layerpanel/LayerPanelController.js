@@ -21,7 +21,7 @@ Ext.define('mapviewer.view.layerpanel.LayerPanelController', {
     },
 
     itemdblclick: function (view, rec, item, index, eventObj) {
-        var name = rec.getData().get('name');
+        var name = rec.getData().get('fullname');
         var ptype = rec.getData().get('ptype');
         var sourceIndex = rec.getData().get('sourceIndex');
         var view = this.Map.map.getView();
@@ -37,7 +37,7 @@ Ext.define('mapviewer.view.layerpanel.LayerPanelController', {
             }
         }
         if (!extent) {
-            webExtent = ol.proj.EPSG3857.EXTENT;
+            webExtent = view.getProjection().getExtent();
         } else {
             var p1 = new ol.proj.fromLonLat([extent[0], extent[1]], view.getProjection());
             var p2 = new ol.proj.fromLonLat([extent[2], extent[3]], view.getProjection());
