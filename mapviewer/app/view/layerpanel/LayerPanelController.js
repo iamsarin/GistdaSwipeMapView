@@ -22,10 +22,11 @@ Ext.define('mapviewer.view.layerpanel.LayerPanelController', {
 
     itemdblclick: function (view, rec, item, index, eventObj) {
         var name = rec.getData().get('fullname');
+        var source = rec.getData().get('source');
         var ptype = rec.getData().get('ptype');
         var sourceIndex = rec.getData().get('sourceIndex');
         var view = this.Map.map.getView();
-        var extent, webExtent;
+        var extent, tmsCabUrl;
 
         if (ptype === 'gxp_wmscsource') {
             var layerInfo = this.Map.capabilities[sourceIndex].Capability.Layer.Layer;
@@ -35,14 +36,44 @@ Ext.define('mapviewer.view.layerpanel.LayerPanelController', {
                     break;
                 }
             }
-        }
-        if (!extent) {
-            webExtent = view.getProjection().getExtent();
+            if (!extent) {
+                extent = view.getProjection().getExtent();
+            } else {
+                var p1 = new ol.proj.fromLonLat([extent[0], extent[1]], view.getProjection());
+                var p2 = new ol.proj.fromLonLat([extent[2], extent[3]], view.getProjection());
+                extent = [p1[0], p1[1], p2[0], p2[1]];
+            }
+            this.Map.zoomToLayer(extent);
+
+        } else if (ptype === 'gxp_tmssource') {
+            if (source.getUrls()[0]) {
+                tmsCabUrl = source.getUrls()[0].replace('%2F{z}%2F{x}%2F{-y}.png', '');
+                $.ajax({
+                    type: 'GET',
+                    url: tmsCabUrl,
+                    dataType: "xml",
+                    success: function (xml) {
+                        $(xml).find('BoundingBox').each(function () {
+                            var $this = $(this);
+                            extent = [parseFloat($this.attr('minx')), parseFloat($this.attr('miny')),
+                                parseFloat($this.attr('maxx')), parseFloat($this.attr('maxy'))];
+                            if (!extent) {
+                                extent = mapviewer.view.mappanel.Map.map.getView().getProjection().getExtent();
+                            }
+                            console.log(extent);
+                            mapviewer.view.mappanel.Map.zoomToLayer(extent)
+                        });
+                    },
+                    error: function () {
+                        console.log('Load Capabilities Fail..');
+                    }
+                });
+            }
         } else {
-            var p1 = new ol.proj.fromLonLat([extent[0], extent[1]], view.getProjection());
-            var p2 = new ol.proj.fromLonLat([extent[2], extent[3]], view.getProjection());
-            webExtent = [p1[0], p1[1], p2[0], p2[1]];
+            if (!extent) {
+                extent = view.getProjection().getExtent();
+            }
+            this.Map.zoomToLayer(extent);
         }
-        this.Map.zoomToLayer(webExtent);
     }
 });

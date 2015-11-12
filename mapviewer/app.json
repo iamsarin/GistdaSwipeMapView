@@ -346,6 +346,13 @@
      * Settings specific to testing builds.
      */
     "testing": {
+        "output": {
+            "microloader": {
+                "path": "microloader.js",
+                "embed": false,
+                "enable": true
+            }
+        }
     },
 
     /**

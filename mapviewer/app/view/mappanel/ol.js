@@ -70,10 +70,9 @@ Ext.define('mapviewer.view.mappanel.ol', {
             button.innerHTML = '<i class="fa fa-print"></i>';
 
 
-
             $(button).click(function () {
                 var link = document.createElement('a');
-                link.setAttribute('download', map_config.about['title'] +'.png');
+                link.setAttribute('download', map_config.about['title'] + '.png');
                 var canvas = $('canvas')[0];
                 var dt = canvas.toDataURL('image/png');
                 link.href = dt.replace(/^data:image\/[^;]/, 'data:application/octet-stream');
@@ -103,7 +102,6 @@ Ext.define('mapviewer.view.mappanel.ol', {
             $(button).click(function () {
                 var Map = mapviewer.view.mappanel.Map;
                 var element = $('.ol-overviewmap-map').parent();
-                console.log(element);
                 if (Map.ol3d.getEnabled()) {
                     element.removeClass('hidden');
                     Map.ol3d.setEnabled(false);
@@ -131,6 +129,7 @@ Ext.define('mapviewer.view.mappanel.ol', {
                 target: options.target
             });
         },
+
         measureControl: function (opt_options) {
             var options = opt_options || {};
 

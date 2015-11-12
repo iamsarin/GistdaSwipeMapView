@@ -32,6 +32,28 @@ Ext.define('mapviewer.view.mappanel.Map', {
 
     setMap: function () {
         ol.inherits(mapviewer.view.mappanel.ol.FullScreenControl, ol.control.Control);
+        var projection;
+        if (map_config.map.projection) {
+            projection = map_config.map.projection;
+            if (projection === 'EPSG:102100' ||
+                projection === 'EPSG:102113' ||
+                projection === 'EPSG:3857' ||
+                projection === 'urn:ogc:def:crs:EPSG:6.18:3:3857' ||
+                projection === 'EPSG:900913') {
+                projection = 'EPSG:3857'
+            } else if (
+                projection === 'CRS:84' ||
+                projection === 'urn:ogc:def:crs:EPSG:6.6:4326' ||
+                projection === 'EPSG:4326' ||
+                projection === 'urn:ogc:def:crs:OGC:2:84' ||
+                projection === 'urn:ogc:def:crs:OGC:1.3:CRS84') {
+                projection = 'EPSG:4326'
+            } else {
+                projection = 'EPSG:3857';
+            }
+        } else {
+            projection = 'EPSG:3857';
+        }
         var olMap = new ol.Map({
             controls: ol.control.defaults().extend([
                 new ol.control.ScaleLine(),
@@ -43,7 +65,7 @@ Ext.define('mapviewer.view.mappanel.Map', {
                 zoom: 2,
                 maxZoom: 19,
                 minZoom: 2,
-                projection: map_config.map.projection ? map_config.map.projection : 'EPSG:3857'
+                projection: projection
             })
         });
 
@@ -242,7 +264,8 @@ Ext.define('mapviewer.view.mappanel.Map', {
                         url += '/';
                     }
                 }
-
+                var encodeUrl = encodeURIComponent(url);
+                var encodeName = encodeURIComponent(val.name);
                 layer = new ol.layer.Tile({
                     name: val.title ? val.title : nameSplit[1],
                     fullname: val.name,
@@ -250,9 +273,7 @@ Ext.define('mapviewer.view.mappanel.Map', {
                     sourceIndex: val.source,
                     visible: val.visibility,
                     source: new ol.source.XYZ({
-                        url: url + val.name + '@'
-                        + map.getView().getProjection().getCode()
-                        + '@png' + '/{z}/{x}/{-y}.png'
+                        url: '/proxy/?url=' + encodeUrl + encodeName + '%40' + 'EPSG%3A900913' + '@png' + '%2F{z}%2F{x}%2F{-y}.png'
                     })
                 });
                 tmsLayers.push(layer);
