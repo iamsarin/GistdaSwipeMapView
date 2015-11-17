@@ -101,12 +101,15 @@ Ext.define('mapviewer.view.mappanel.ol', {
 
             $(button).click(function () {
                 var Map = mapviewer.view.mappanel.Map;
-                var element = $('.ol-overviewmap-map').parent();
+                var overviewMapElement = $('.ol-overviewmap-map').parent();
+                var printMapElement = $('.printMap');
                 if (Map.ol3d.getEnabled()) {
-                    element.removeClass('hidden');
+                    overviewMapElement.removeClass('hidden');
+                    printMapElement.removeClass('hidden');
                     Map.ol3d.setEnabled(false);
                 } else {
-                    element.addClass('hidden');
+                    overviewMapElement.addClass('hidden');
+                    printMapElement.addClass('hidden');
                     Map.ol3d.setEnabled(true);
                 }
                 jbutton.toggleClass("unpressed pressed");

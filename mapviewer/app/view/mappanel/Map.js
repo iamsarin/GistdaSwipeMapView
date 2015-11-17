@@ -119,7 +119,7 @@ Ext.define('mapviewer.view.mappanel.Map', {
     },
 
     webglAvailable: function () {
-        if(this.hasWebGL !== null) {
+        if (this.hasWebGL !== null) {
             return this.hasWebGL;
         }
         try {
@@ -134,51 +134,94 @@ Ext.define('mapviewer.view.mappanel.Map', {
     },
 
     getCapabilities: function () {
-        var parser, result, requesParams, url;
-        var promises = [];
+        var result, requestParams, url;
         var Map = this;
         var capabilities = this.capabilities;
-        jQuery.each(map_config.sources, function (key, value) {
-            if (value.ptype === 'gxp_wmscsource') {
-                parser = new ol.format.WMSCapabilities();
-                requesParams = '?service=wms&request=getCapabilities&version=1.3.0';
-                url = value.url + requesParams;
+        var wmsSourceHasLayerObj1 = {}, wmsSourceHasLayerObj2 = {};
+
+        if (map_config.map.layers && $.isArray(map_config.map.layers)) {
+            var layerConfig;
+            for (var i = 0; i < map_config.map.layers.length; i++) {
+                layerConfig = map_config.sources[map_config.map.layers[i].source];
+                if (layerConfig.ptype === 'gxp_wmscsource') {
+                    if (layerConfig.url in wmsSourceHasLayerObj1) {
+                        map_config.map.layers[i].source
+                            = wmsSourceHasLayerObj1[layerConfig.url];
+                    } else {
+                        wmsSourceHasLayerObj2[map_config.map.layers[i].source]
+                            = layerConfig.url;
+                        wmsSourceHasLayerObj1[layerConfig.url]
+                            = map_config.map.layers[i].source;
+                    }
+                }
+            }
+        }
+        var wmsSourceHasLayers = Object.keys(wmsSourceHasLayerObj2);
+        console.log('*-*-*-*-*-*-', wmsSourceHasLayers);
+
+        var isFinish = function (wmsNumberRequests) {
+            console.log('---++-+++numberRequests', wmsNumberRequests);
+            if (wmsNumberRequests >= wmsSourceHasLayers.length) {
+                Map.capabilities = capabilities;
+                console.log('----------------WMS.capabilities', Map.capabilities);
+                Map.setLayers();
+                Map.setMeasure();
+                var overviewMapControl = new ol.control.OverviewMap();
+                Map.map.addControl(overviewMapControl);
+            }
+        };
+
+        // load WMS Capabilities
+        var sourceConfig;
+        var wmsNumberRequests = 0;
+        var parser = new ol.format.WMSCapabilities();
+        var saveCap = function (sourceId) {
+            return function (cap) {
+                wmsNumberRequests++;
+                result = parser.read(cap);
+                capabilities[sourceId] = result;
+                isFinish(wmsNumberRequests);
+            };
+        };
+        var loadCapFail = function (sourceId, url) {
+            return function () {
+                console.log('***Fail load Cap', sourceId, url);
+                wmsNumberRequests++;
+                isFinish(wmsNumberRequests);
+            };
+        };
+        for (var j = 0; j < wmsSourceHasLayers.length; j++) {
+            sourceConfig = map_config.sources[wmsSourceHasLayers[j]];
+            if (sourceConfig.ptype === 'gxp_wmscsource') {
+                requestParams = '?service=wms&request=getCapabilities&version=1.3.0';
+                url = sourceConfig.url + requestParams;
                 url = '/proxy/?url=' + encodeURIComponent(url);
 
                 var request = $.ajax({
                     method: 'get',
                     url: url
-                }).then(function (response) {
-                    result = parser.read(response);
-                    capabilities[key] = result;
-                    console.log('***Get Capacity=', capabilities[key]);
-                });
-                promises.push(request);
-            } else {
-                console.log('***Not wms', value);
+                }).then(saveCap(wmsSourceHasLayers[j]),
+                    loadCapFail(wmsSourceHasLayers[j], url));
             }
-        });
-
-        $.when.apply(null, promises).done(function () {
-            Map.capabilities = capabilities;
-            console.log('----------------', Map.capabilities);
-            Map.setLayers();
-            Map.setMeasure();
-            var overviewMapControl = new ol.control.OverviewMap();
-            Map.map.addControl(overviewMapControl);
-        });
+        }
     },
 
     setLayers: function () {
-        var sourceObj, sourceIndex, ptype, LayerName, layer, nameSplit;
+        var sourceObj, sourceIndex, ptype, LayerName, layer, nameSplit, layerInfo;
         var map = this.map;
         var wmsLayers = this.wmsLayers;
         var tmsLayers = this.tmsLayers;
-        jQuery.each(map_config.map.layers, function (i, val) {
+        var Map = this;
+
+        for (var i = 0; i < map_config.map.layers.length; i++) {
+            layer = null;
+            var val = map_config.map.layers[i];
             sourceIndex = val.source;
             sourceObj = map_config.sources[sourceIndex];
             ptype = sourceObj.ptype;
             LayerName = val.name;
+
+            console.log('-+-+--+-+-+-sourceObj', sourceObj);
             if (ptype === 'gxp_osmsource') {
                 layer = new ol.layer.Tile({
                     name: val.title ? val.title : val.name,
@@ -229,14 +272,33 @@ Ext.define('mapviewer.view.mappanel.Map', {
                     });
                 }
             } else if (ptype === 'gxp_wmscsource') {
+                console.log('*****--------', Map.capabilities);
                 nameSplit = val.name.split(':');
+                if (sourceIndex in Map.capabilities) {
+                    if (val.visibility) {
+                        layerInfo = Map.capabilities[sourceIndex].Capability.Layer.Layer;
+                        val.visibility = false;
+                        for (var j = 0; j < layerInfo.length; j++) {
+                            if (layerInfo[j].Name === val.name) {
+                                val.visibility = true;
+                                break;
+                            } else if (val.name.search(':') >= 0) {
+                                if (nameSplit[1] === layerInfo[j].Name) {
+                                    val.visibility = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    val.visibility = false;
+                }
 
                 // favor virtual service url when available
                 var mostSpecificUrlWms = sourceObj.url;
                 if (sourceObj.isVirtualService && (sourceObj.isVirtualService === true)) {
                     mostSpecificUrlWms = sourceObj.virtualServiceUrl;
                 }
-
 
                 var wmsSource = new ol.source.TileWMS({
                     url: mostSpecificUrlWms,
@@ -271,20 +333,54 @@ Ext.define('mapviewer.view.mappanel.Map', {
                     fullname: val.name,
                     ptype: ptype,
                     sourceIndex: val.source,
+                    bbox: null,
                     visible: val.visibility,
                     source: new ol.source.XYZ({
                         url: '/proxy/?url=' + encodeUrl + encodeName + '%40' + 'EPSG%3A900913' + '@png' + '%2F{z}%2F{x}%2F{-y}.png'
                     })
                 });
                 tmsLayers.push(layer);
+
+                var tmsLoad = function (isSuccess, layer) {
+                    return function (cap) {
+                        if (isSuccess) {
+                            var extent;
+                            $(cap).find('BoundingBox').each(function () {
+                                var $this = $(this);
+                                extent = [parseFloat($this.attr('minx')), parseFloat($this.attr('miny')),
+                                    parseFloat($this.attr('maxx')), parseFloat($this.attr('maxy'))];
+                                if (!extent) {
+                                    extent = view.getProjection().getExtent();
+                                }
+                                layer.bbox = extent;
+                            });
+                        } else {
+                            if (layer.getVisible()) {
+                                layer.setVisible(false);
+                            }
+                            layer.bbox = null;
+                        }
+                    };
+                };
+                var tmsCabUrl = layer.getSource().getUrls()[0].replace('%2F{z}%2F{x}%2F{-y}.png', '');
+                $.ajax({
+                    type: 'GET',
+                    url: tmsCabUrl,
+                    dataType: 'xml'
+                }).then(tmsLoad(true, layer),
+                    tmsLoad(false, layer));
+
             } else {
                 console.log('unknown ***ptype = ', ptype);
             }
+
             if (layer) {
-                map.addLayer(layer);
+                //layer.visible = false;
+                this.map.addLayer(layer);
                 console.log('==Layer added', layer);
             }
-        });
+        }
+
         if (map_config.map.center && map_config.map.projection && map_config.map.zoom) {
             var view = this.map.getView();
             var center = new ol.proj.transform(
@@ -402,7 +498,7 @@ Ext.define('mapviewer.view.mappanel.Map', {
     },
 
     set3DMapControl: function () {
-        if(this.webglAvailable()) {
+        if (this.webglAvailable()) {
             ol.inherits(mapviewer.view.mappanel.ol.map3dControl, ol.control.Control);
             var map3dControl = new mapviewer.view.mappanel.ol.map3dControl();
             this.map.addControl(map3dControl);
@@ -522,6 +618,7 @@ Ext.define('mapviewer.view.mappanel.Map', {
         var featureInfo = this.featureInfo;
         var requestFeature = [];
         var jbutton = $('#btn_measure');
+        var numberVisibleWmsLayers = 0;
 
         // create overlay element and add to map
         var featureInfoElement = document.createElement("div");
@@ -645,9 +742,20 @@ Ext.define('mapviewer.view.mappanel.Map', {
             return center;
         };
 
+        numberVisibleWmsLayers = function () {
+            var count = 0;
+            for (var n = 0; n < wmsLayers.length; n++) {
+                if (wmsLayers[n].getVisible()) {
+                    count++;
+                }
+            }
+            return count;
+        }();
+
         map.on('singleclick', function (evt) {
             //check if measure using featureInfo not show
             if (jbutton.attr('pressed') === 'true') {
+                alert('Measure On!');
                 return;
             }
             for (var j = 0; j < requestFeature.length; j++) {
@@ -655,132 +763,33 @@ Ext.define('mapviewer.view.mappanel.Map', {
             }
             requestFeature = [];
 
-            var wmsSource, url, jsonFirstFeature;
+            var wmsSource, url;
             var view = map.getView();
             var viewResolution = /** @type {number} */ (view.getResolution());
-            var numberFeature = 0;
+            var numberRequested = 0;
             var jsonFeatures = [];
 
             vectorSource.clear();
             featureInfoElementExt.removeAll();
             jfeatureInfoElement.addClass('hidden');
-            //featureInfo.setPosition(evt.coordinate);
 
-            for (var i = 0; i < wmsLayers.length; i++) {
-                wmsSource = wmsLayers[i].getSource();
-                url = wmsSource.getGetFeatureInfoUrl(
-                    evt.coordinate,
-                    viewResolution,
-                    view.getProjection().getCode(),
-                    {
-                        'INFO_FORMAT': 'application/json',
-                        'FEATURE_COUNT': '5'
-                    }
-                );
-
-                var request = $.getJSON(url)
-                    .done(function (json) {
-                        var accordionItem = {
-                            title: '',
-                            html: null,
-                            autoEl: {
-                                tag: 'div',
-                                'index': null
-                            }
-                        };
-                        var table;
-                        if (json.features.length > 0) {
-                            for (var i = 0; i < json.features.length; i++) {
-                                numberFeature++;
-                                jsonFeatures.push(json.features[i]);
-                                if (numberFeature === 1 && json.features[i].geometry !== null) {
-                                    jsonFirstFeature = json.features[i];
-                                }
-                                table = '<table class="tab_featureInfo">';
-
-
-                                if (json.features[i].id) {
-                                    accordionItem.title = json.features[i].id;
-                                } else {
-                                    accordionItem.title = this.url.replace('/proxy/?url=', '');
-                                    accordionItem.title = decodeURIComponent(decodeURIComponent(accordionItem.title));
-                                    accordionItem.title = accordionItem.title.slice(accordionItem.title.search("&LAYERS=") + 8);
-                                    accordionItem.title = accordionItem.title.slice(0, accordionItem.title.search("&"));
-                                    accordionItem.title = accordionItem.title.slice(accordionItem.title.search(":") + 1);
-                                }
-
-                                for (var propertie in json.features[i].properties) {
-
-                                    if (json.features[i].properties.hasOwnProperty(propertie)) {
-                                        table += '<tr>';
-                                        table += '<th>' + propertie + '</th>';
-                                        table += '<td>' + json.features[i].properties[propertie] + '</td>';
-                                        table += '</tr>';
-                                    }
-                                }
-                                table += '</table>';
-                                accordionItem.html = table;
-                                featureInfoElementExt.add(accordionItem);
-                            }
-                        }
-                    })
-                    .fail(function (jqxhr, textStatus, error) {
-                        var err = textStatus + ", " + error;
-                        console.log("Request getFeatureInfo Failed: " + err);
-                    });
-
-                requestFeature.push(request);
-            }
-            $.when.apply(null, requestFeature).done(function () {
-                // check if have any feature then show overlay element
+            // bind accordion click
+            var jfeatureInfoItemElement = jfeatureInfoElement.find('.x-accordion-item');
+            var showFeatureInfo = function (jsonFeatures, projection) {
+                var numberFeature = jsonFeatures.length;
                 if (numberFeature > 0) {
-                    function changeCss() {
-                        jfeatureInfoElement.removeClass('hidden');
-                        jfeatureInfoElement.find('.x-panel-header-title').css('top', '0');
-                        jfeatureInfoElement.find('#featureInfoElementExt_header').css({
-                            'padding-top': '0',
-                            'padding-bottom': '0'
-                        });
-                        var jfeatureInfoElementInnerCt = jfeatureInfoElement.find('#featureInfoElementExt-innerCt');
-                        jfeatureInfoElementInnerCt.find('.x-title-item').css({
-                            'line-height': '15px',
-                            'padding-left': '10px',
-                            'font-size': '14px'
-                        });
-                        jfeatureInfoElement.find('.x-tool-collapse-top').css('background-position', '0 -340px');
-                        jfeatureInfoElement.find('.x-tool-collapse-bottom').css('background-position', '0 -340px');
-                        jfeatureInfoElement.find('.x-tool-expand-top').css('background-position', '0 -320px');
-                        jfeatureInfoElement.find('.x-tool-expand-bottom').css('background-position', '0 -320px');
-                        jfeatureInfoElement.find('#featureInfoElementExt-body').find('.x-tool-img').css({
-                            'height': '20px',
-                            'width': '20px',
-                            'background-size': '100%'
-                        });
-                    }
-
-                    changeCss();
-                    if (jsonFirstFeature) {
-                        var feature = (new ol.format.GeoJSON()).readFeatures(jsonFirstFeature, {
-                            dataProjection: 'EPSG:4326',
-                            featureProjection: view.getProjection().getCode()
-                        });
-                        vectorSource.addFeatures(feature);
-                        setCenter(jsonFirstFeature.geometry);
-                    } else {
-                        featureInfo.setPosition(evt.coordinate);
-                    }
-
-                    // bind accordion click
-                    jfeatureInfoElement.find('.x-accordion-item').click(function () {
+                    jfeatureInfoItemElement.unbind();
+                    jfeatureInfoItemElement = jfeatureInfoElement.find('.x-accordion-item');
+                    jfeatureInfoItemElement.click(function () {
                         var idClick = this.id;
-                        $.each(jfeatureInfoElement.find('.x-accordion-item'), function (key, value) {
+                        $.each(jfeatureInfoItemElement, function (key, value) {
                             if (value.id === idClick) {
                                 featureInfoElementExt.items.items[key].expand();
                                 changeCss();
                                 vectorSource.clear();
                                 if (jsonFeatures[key].geometry !== null) {
                                     var feature = (new ol.format.GeoJSON()).readFeatures(jsonFeatures[key], {
-                                        dataProjection: 'EPSG:4326',
+                                        dataProjection: projection,
                                         featureProjection: view.getProjection().getCode()
                                     });
                                     vectorSource.addFeatures(feature);
@@ -792,8 +801,117 @@ Ext.define('mapviewer.view.mappanel.Map', {
                             }
                         });
                     });
+                    changeCss();
+                    if (jsonFeatures[0] && jsonFeatures[0].geometry !== null) {
+                        var feature = (new ol.format.GeoJSON()).readFeatures(jsonFeatures[0], {
+                            dataProjection: projection,
+                            featureProjection: view.getProjection().getCode()
+                        });
+                        vectorSource.addFeatures(feature);
+                        setCenter(jsonFeatures[0].geometry);
+                    } else {
+                        featureInfo.setPosition(evt.coordinate);
+                    }
                 }
-            });
+            };
+
+            var changeCss = function () {
+                var jfeatureInfoElement = $('#featureInfoElement');
+                jfeatureInfoElement.removeClass('hidden');
+                jfeatureInfoElement.find('.x-panel-header-title').css('top', '0');
+                jfeatureInfoElement.find('#featureInfoElementExt_header').css({
+                    'padding-top': '0',
+                    'padding-bottom': '0'
+                });
+                var jfeatureInfoElementInnerCt = jfeatureInfoElement.find('#featureInfoElementExt-innerCt');
+                jfeatureInfoElementInnerCt.find('.x-title-item').css({
+                    'line-height': '15px',
+                    'padding-left': '10px',
+                    'font-size': '14px'
+                });
+                jfeatureInfoElement.find('.x-tool-collapse-top').css('background-position', '0 -340px');
+                jfeatureInfoElement.find('.x-tool-collapse-bottom').css('background-position', '0 -340px');
+                jfeatureInfoElement.find('.x-tool-expand-top').css('background-position', '0 -320px');
+                jfeatureInfoElement.find('.x-tool-expand-bottom').css('background-position', '0 -320px');
+                jfeatureInfoElement.find('#featureInfoElementExt-body').find('.x-tool-img').css({
+                    'height': '20px',
+                    'width': '20px',
+                    'background-size': '100%'
+                });
+            };
+
+            var isFinished = function (numberRequested, jsonFeatures, projection) {
+                if (numberRequested >= numberVisibleWmsLayers) {
+                    showFeatureInfo(jsonFeatures, projection);
+                }
+            };
+
+            for (var i = 0; i < wmsLayers.length; i++) {
+                if (wmsLayers[i].getVisible()) {
+                    wmsSource = wmsLayers[i].getSource();
+                    url = wmsSource.getGetFeatureInfoUrl(
+                        evt.coordinate,
+                        viewResolution,
+                        view.getProjection().getCode(),
+                        {
+                            'INFO_FORMAT': 'application/json',
+                            'FEATURE_COUNT': '3'
+                        }
+                    );
+
+                    var request = $.getJSON(url)
+                        .done(function (json) {
+                            var accordionItem = {
+                                title: '',
+                                html: null,
+                                autoEl: {
+                                    tag: 'div',
+                                    'index': null
+                                }
+                            };
+                            var table;
+                            var projection = null;
+                            if (json.features.length > 0) {
+                                for (var i = 0; i < json.features.length; i++) {
+                                    projection = json.crs ? json.crs.properties.name : null
+                                    jsonFeatures.push(json.features[i]);
+                                    table = '<table class="tab_featureInfo">';
+
+                                    if (json.features[i].id) {
+                                        accordionItem.title = json.features[i].id;
+                                    } else {
+                                        accordionItem.title = this.url.replace('/proxy/?url=', '');
+                                        accordionItem.title = decodeURIComponent(decodeURIComponent(accordionItem.title));
+                                        accordionItem.title = accordionItem.title.slice(accordionItem.title.search("&LAYERS=") + 8);
+                                        accordionItem.title = accordionItem.title.slice(0, accordionItem.title.search("&"));
+                                        accordionItem.title = accordionItem.title.slice(accordionItem.title.search(":") + 1);
+                                    }
+
+                                    for (var propertie in json.features[i].properties) {
+                                        if (json.features[i].properties.hasOwnProperty(propertie)) {
+                                            table += '<tr>';
+                                            table += '<th>' + propertie + '</th>';
+                                            table += '<td>' + json.features[i].properties[propertie] + '</td>';
+                                            table += '</tr>';
+                                        }
+                                    }
+                                    table += '</table>';
+                                    accordionItem.html = table;
+                                    featureInfoElementExt.add(accordionItem);
+                                }
+                            }
+                            numberRequested++;
+                            isFinished(numberRequested, jsonFeatures, projection);
+                        })
+                        .fail(function (jqxhr, textStatus, error) {
+                            var err = textStatus + ", " + error;
+                            console.log("Request getFeatureInfo Failed: " + err, jqxhr);
+                            numberRequested++;
+                            isFinished(numberRequested, jsonFeatures, projection);
+                        });
+                    requestFeature.push(request);
+                }
+            }
         });
     },
 

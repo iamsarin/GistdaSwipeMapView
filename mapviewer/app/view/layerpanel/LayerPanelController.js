@@ -12,28 +12,33 @@ Ext.define('mapviewer.view.layerpanel.LayerPanelController', {
     /**
      * Called when the view is created
      */
-    btn_3dmap: null,
-    btn_measure: null,
     Map: mapviewer.view.mappanel.Map,
     init: function () {
-        this.btn_3dmap = Ext.getCmp('btn_3dmap');
-        this.btn_measure = Ext.getCmp('btn_measure');
     },
 
-    itemdblclick: function (view, rec, item, index, eventObj) {
+    itemdblclick: function (vieww, rec, item, index, eventObj) {
         var name = rec.getData().get('fullname');
         var source = rec.getData().get('source');
         var ptype = rec.getData().get('ptype');
         var sourceIndex = rec.getData().get('sourceIndex');
-        var view = this.Map.map.getView();
+        var Map = this.Map;
+        var view = Map.map.getView();
         var extent, tmsCabUrl;
+        var isVisible = rec.getData().get('visible');
 
-        if (ptype === 'gxp_wmscsource') {
+        if (isVisible && ptype === 'gxp_wmscsource') {
             var layerInfo = this.Map.capabilities[sourceIndex].Capability.Layer.Layer;
+            var nameSplit;
             for (var i = 0; i < layerInfo.length; i++) {
                 if (layerInfo[i].Name === name) {
                     extent = layerInfo[i].EX_GeographicBoundingBox;
                     break;
+                } else if (name.search(':') >= 0) {
+                    nameSplit = name.split(':');
+                    if (nameSplit[1] === layerInfo[i].Name) {
+                        extent = layerInfo[i].EX_GeographicBoundingBox;
+                        break;
+                    }
                 }
             }
             if (!extent) {
@@ -43,9 +48,9 @@ Ext.define('mapviewer.view.layerpanel.LayerPanelController', {
                 var p2 = new ol.proj.fromLonLat([extent[2], extent[3]], view.getProjection());
                 extent = [p1[0], p1[1], p2[0], p2[1]];
             }
-            this.Map.zoomToLayer(extent);
+            Map.zoomToLayer(extent);
 
-        } else if (ptype === 'gxp_tmssource') {
+        } else if (isVisible && ptype === 'gxp_tmssource') {
             if (source.getUrls()[0]) {
                 tmsCabUrl = source.getUrls()[0].replace('%2F{z}%2F{x}%2F{-y}.png', '');
                 $.ajax({
@@ -58,14 +63,15 @@ Ext.define('mapviewer.view.layerpanel.LayerPanelController', {
                             extent = [parseFloat($this.attr('minx')), parseFloat($this.attr('miny')),
                                 parseFloat($this.attr('maxx')), parseFloat($this.attr('maxy'))];
                             if (!extent) {
-                                extent = mapviewer.view.mappanel.Map.map.getView().getProjection().getExtent();
+                                extent = view.getProjection().getExtent();
                             }
-                            console.log(extent);
-                            mapviewer.view.mappanel.Map.zoomToLayer(extent)
+                            Map.zoomToLayer(extent)
                         });
                     },
                     error: function () {
-                        console.log('Load Capabilities Fail..');
+                        console.log('Load TMS Capabilities Fail..');
+                        extent = view.getProjection().getExtent();
+                        Map.zoomToLayer(extent);
                     }
                 });
             }
@@ -73,7 +79,7 @@ Ext.define('mapviewer.view.layerpanel.LayerPanelController', {
             if (!extent) {
                 extent = view.getProjection().getExtent();
             }
-            this.Map.zoomToLayer(extent);
+            Map.zoomToLayer(extent);
         }
     }
 });
