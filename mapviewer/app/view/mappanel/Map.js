@@ -25,6 +25,7 @@ Ext.define('mapviewer.view.mappanel.Map', {
     featureInfoElement: null,
     featureInfo: null,
     hasWebGL: null,
+    overviewMapControl: null,
 
     getMap: function () {
         return this.map;
@@ -101,6 +102,13 @@ Ext.define('mapviewer.view.mappanel.Map', {
 
         $(olMap.getViewport()).on('mouseout', function () {
             $(mapviewer.view.mappanel.Map.helpTooltipElement).addClass('hidden');
+        });
+
+        olMap.on('change:target', function () {
+            if (!mapviewer.view.mappanel.Map.overviewMapControl) {
+                mapviewer.view.mappanel.Map.overviewMapControl = new ol.control.OverviewMap();
+                olMap.addControl(mapviewer.view.mappanel.Map.overviewMapControl);
+            }
         });
 
         if (this.webglAvailable()) {
@@ -617,15 +625,6 @@ Ext.define('mapviewer.view.mappanel.Map', {
     addFeatureInfoLayer: function () {
         var map = this.map;
         var wmsLayers = this.wmsLayers;
-
-        var overviewMapControl;
-        map.on('change:target', function () {
-            if (!overviewMapControl) {
-                overviewMapControl = new ol.control.OverviewMap();
-                map.addControl(overviewMapControl);
-            }
-        });
-
         var numberVisibleWmsLayers = 0;
         numberVisibleWmsLayers = function () {
             var count = 0;
