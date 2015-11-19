@@ -166,8 +166,6 @@ Ext.define('mapviewer.view.mappanel.Map', {
                 console.log('----------------WMS.capabilities', Map.capabilities);
                 Map.setLayers();
                 Map.setMeasure();
-                var overviewMapControl = new ol.control.OverviewMap();
-                Map.map.addControl(overviewMapControl);
             }
         };
 
@@ -190,18 +188,24 @@ Ext.define('mapviewer.view.mappanel.Map', {
                 isFinish(wmsNumberRequests);
             };
         };
-        for (var j = 0; j < wmsSourceHasLayers.length; j++) {
-            sourceConfig = map_config.sources[wmsSourceHasLayers[j]];
-            if (sourceConfig.ptype === 'gxp_wmscsource') {
-                requestParams = '?service=wms&request=getCapabilities&version=1.3.0';
-                url = sourceConfig.url + requestParams;
-                url = '/proxy/?url=' + encodeURIComponent(url);
+        if (wmsSourceHasLayers.length === 0) {
+            console.log('----------------No WMS Layer');
+            Map.setLayers();
+            Map.setMeasure();
+        } else {
+            for (var j = 0; j < wmsSourceHasLayers.length; j++) {
+                sourceConfig = map_config.sources[wmsSourceHasLayers[j]];
+                if (sourceConfig.ptype === 'gxp_wmscsource') {
+                    requestParams = '?service=wms&request=getCapabilities&version=1.3.0';
+                    url = sourceConfig.url + requestParams;
+                    url = '/proxy/?url=' + encodeURIComponent(url);
 
-                var request = $.ajax({
-                    method: 'get',
-                    url: url
-                }).then(saveCap(wmsSourceHasLayers[j]),
-                    loadCapFail(wmsSourceHasLayers[j], url));
+                    var request = $.ajax({
+                        method: 'get',
+                        url: url
+                    }).then(saveCap(wmsSourceHasLayers[j]),
+                        loadCapFail(wmsSourceHasLayers[j], url));
+                }
             }
         }
     },
@@ -221,7 +225,6 @@ Ext.define('mapviewer.view.mappanel.Map', {
             ptype = sourceObj.ptype;
             LayerName = val.name;
 
-            console.log('-+-+--+-+-+-sourceObj', sourceObj);
             if (ptype === 'gxp_osmsource') {
                 layer = new ol.layer.Tile({
                     name: val.title ? val.title : val.name,
@@ -233,13 +236,10 @@ Ext.define('mapviewer.view.mappanel.Map', {
             } else if (ptype === 'gxp_bingsource') {
                 var sourceParams = {
                     key: 'Ak-dzM4wZjSqTlzveKz5u0d4IQ4bRzVI309GxmkgSVr1ewS6iPSrOvOKhA-CJlm3',
-                    imagerySet: 'Aerial'
+                    imagerySet: val.name
                 };
-                if (sourceParams) {
-                    $.extend(sourceParams, val.sourceParams);
-                }
                 layer = new ol.layer.Tile({
-                    name: val.title ? val.title : val.name,
+                    name: val.title ? val.title : 'Bing' + val.name,
                     ptype: ptype,
                     sourceIndex: val.source,
                     visible: val.visibility,
@@ -247,13 +247,13 @@ Ext.define('mapviewer.view.mappanel.Map', {
                 });
             } else if (ptype === 'gxp_mapboxsource') {
                 var parms = {
-                    url: 'http://api.tiles.mapbox.com/v3/mapbox.' + val.sourceParams.layer + '.jsonp',
+                    url: 'http://api.tiles.mapbox.com/v3/mapbox.' + val.name + '.jsonp',
                     crossOrigin: true
                 };
                 var mbsource = new ol.source.TileJSON(parms);
                 if (mbsource) {
                     layer = new ol.layer.Tile({
-                        name: val.title ? val.title : val.name,
+                        name: val.title ? val.title : 'Mapbox_' + val.name,
                         ptype: ptype,
                         sourceIndex: val.source,
                         visible: val.visibility,
@@ -261,10 +261,20 @@ Ext.define('mapviewer.view.mappanel.Map', {
                     });
                 }
             } else if (ptype === 'gxp_mapquestsource') {
-                var source = new ol.source.MapQuest(val.sourceParams);
+                if (val.name) {
+                    var source = new ol.source.MapQuest({layer: val.name});
+                    var mapquestName = 'MapQuest';
+                    if (val.name.toLowerCase() === 'sat') {
+                        mapquestName += 'Sat';
+                    } else if (val.name.toLowerCase() === 'osm') {
+                        mapquestName += 'OSM';
+                    } else if (val.name.toLowerCase() === 'hyb') {
+                        mapquestName += 'Hybrid';
+                    }
+                }
                 if (source) {
                     layer = new ol.layer.Tile({
-                        name: val.title ? val.title : val.name,
+                        name: val.title ? val.title : mapquestName,
                         ptype: ptype,
                         sourceIndex: val.source,
                         visible: val.visibility,
@@ -375,30 +385,23 @@ Ext.define('mapviewer.view.mappanel.Map', {
             }
 
             if (layer) {
-                //layer.visible = false;
-                this.map.addLayer(layer);
+                map.addLayer(layer);
                 console.log('==Layer added', layer);
             }
         }
 
-        if (map_config.map.center && map_config.map.projection && map_config.map.zoom) {
-            var view = this.map.getView();
+        var view = map.getView();
+        if (map_config.map.center && map_config.map.projection &&
+            (map_config.map.zoom !== null && typeof map_config.map.zoom !== "undefined")) {
             var center = new ol.proj.transform(
                 map_config.map.center,
                 map_config.map.projection,
-                this.map.getView().getProjection()
+                view.getProjection()
             );
-
             view.setCenter(center);
             view.setZoom(map_config.map.zoom);
-
-            var zoom = ol.animation.zoom({
-                duration: 2000,
-                resolution: view.getResolution()
-            });
-            this.map.beforeRender(zoom);
         } else {
-            this.zoomToWorld(this.map);
+            this.zoomToLayer(view.getProjection().getExtent());
         }
         this.addFeatureInfoLayer();
     },
@@ -613,12 +616,34 @@ Ext.define('mapviewer.view.mappanel.Map', {
 
     addFeatureInfoLayer: function () {
         var map = this.map;
-        var view = map.getView();
         var wmsLayers = this.wmsLayers;
+
+        var overviewMapControl;
+        map.on('change:target', function () {
+            if (!overviewMapControl) {
+                overviewMapControl = new ol.control.OverviewMap();
+                map.addControl(overviewMapControl);
+            }
+        });
+
+        var numberVisibleWmsLayers = 0;
+        numberVisibleWmsLayers = function () {
+            var count = 0;
+            for (var n = 0; n < wmsLayers.length; n++) {
+                if (wmsLayers[n].getVisible()) {
+                    count++;
+                }
+            }
+            return count;
+        }();
+        if (numberVisibleWmsLayers <= 0) {
+            return;
+        }
+
+        var view = map.getView();
         var featureInfo = this.featureInfo;
         var requestFeature = [];
         var jbutton = $('#btn_measure');
-        var numberVisibleWmsLayers = 0;
 
         // create overlay element and add to map
         var featureInfoElement = document.createElement("div");
@@ -741,16 +766,6 @@ Ext.define('mapviewer.view.mappanel.Map', {
             featureInfo.setPosition(center);
             return center;
         };
-
-        numberVisibleWmsLayers = function () {
-            var count = 0;
-            for (var n = 0; n < wmsLayers.length; n++) {
-                if (wmsLayers[n].getVisible()) {
-                    count++;
-                }
-            }
-            return count;
-        }();
 
         map.on('singleclick', function (evt) {
             //check if measure using featureInfo not show

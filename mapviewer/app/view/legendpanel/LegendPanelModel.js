@@ -38,7 +38,6 @@ Ext.define('mapviewer.view.legendpanel.LegendPanelModel', {
                 }
             });
             table += '</table>';
-            console.log(table);
             return table;
         }()
     }
