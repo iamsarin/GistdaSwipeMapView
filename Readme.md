@@ -1,4 +1,4 @@
-# GistdaMapView
+# GistdaSwipeMapView
 GistdaMapView is map viewer for GeoNode using GeoNode config. 
 Using [Openlayers3](https://openlayers.org) for 2D and [Ol3-Cesium](https://openlayers.org/ol3-cesium) for 3D map.
 This project using [Ext JS GPL](https://www.sencha.com/legal/gpl/) and [GeoExt3](https://geoext.github.io/geoext3/) for ui component.
@@ -6,14 +6,14 @@ This project using [Ext JS GPL](https://www.sencha.com/legal/gpl/) and [GeoExt3]
 ## Installation
 1. Download gistdamapview.zip at
   ```
-  https://github.com/GistdaDev/GistdaMapView/releases
+  https://github.com/iamsarin/GistdaSwipeMapView/releases
   ```
 2. Installation Instructions is located in Readme.txt file.  
 
 ## Installation for Dev
 1. Clone this Repo.  
   ```
-  git clone git://github.com/GistdaDev/GistdaMapView
+  git clone https://github.com/iamsarin/GistdaSwipeMapView.git
   ```
 2. Change into "mapviewer" project Directory.  
   ```
@@ -30,4 +30,4 @@ This project using [Ext JS GPL](https://www.sencha.com/legal/gpl/) and [GeoExt3]
 5. Dev and Enjoy it.  
 
 ## Licensing
-GistdaMapView is made available under a GPL V3. Please see [License.md](License.md) in this distribution for more details.
+GistdaSwipeMapView is made available under a GPL V3. Please see [License.md](License.md) in this distribution for more details.
